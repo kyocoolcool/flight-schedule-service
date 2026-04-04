@@ -4,11 +4,18 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.config import settings
-from app.routers import aviation_edge, flights, scraper
+from app.routers import aviation_edge, flights
 from app.services.aviation_edge_client import aviation_edge_client
 from app.services.flight_cache import flight_scheduler
 from app.services.oag_client import oag_client
-from app.services.taoyuan_scraper import taoyuan_scraper
+
+try:
+    from app.routers import scraper
+    from app.services.taoyuan_scraper import taoyuan_scraper
+
+    HAS_SCRAPER = True
+except ImportError:
+    HAS_SCRAPER = False
 
 
 @asynccontextmanager
@@ -20,7 +27,8 @@ async def lifespan(app: FastAPI):
     await flight_scheduler.stop()
     await oag_client.close()
     await aviation_edge_client.close()
-    await taoyuan_scraper.close()
+    if HAS_SCRAPER:
+        await taoyuan_scraper.close()
     logging.getLogger(__name__).info("Flight Schedule Service stopped.")
 
 
@@ -33,7 +41,8 @@ app = FastAPI(
 
 app.include_router(flights.router)
 app.include_router(aviation_edge.router)
-app.include_router(scraper.router)
+if HAS_SCRAPER:
+    app.include_router(scraper.router)
 
 
 @app.get("/health")
