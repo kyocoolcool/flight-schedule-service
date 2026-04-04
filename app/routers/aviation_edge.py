@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, Query
 from app.config import TAIWAN_AIRPORTS
 from app.models.flight import FlightCollectionResult, FlightCollectionSummary
 from app.services.aviation_edge_client import aviation_edge_client
+from app.services.flight_cache import get_cache_stats, get_cached, refresh_cache, set_cached
 
 router = APIRouter(prefix="/api/aviation-edge", tags=["aviation-edge"])
 
@@ -36,7 +37,7 @@ async def get_airport_departures(
     airport_code: str,
     query_date: str | None = Query(None, description="查詢日期 (YYYY-MM-DD)"),
 ):
-    """透過 Aviation Edge API 查詢指定台灣機場的出境航班"""
+    """查詢指定台灣機場的出境航班（優先讀快取）"""
     airport_code = airport_code.upper()
     if airport_code not in TAIWAN_AIRPORTS:
         raise HTTPException(
@@ -47,8 +48,14 @@ async def get_airport_departures(
     if query_date is None:
         query_date = date.today().isoformat()
 
+    # 優先讀快取
+    cached = get_cached(airport_code, "departure", query_date)
+    if cached:
+        return cached
+
+    # 快取未命中，即時查詢並寫入快取
     flights = await aviation_edge_client.get_taiwan_departures(airport_code, query_date)
-    return FlightCollectionResult(
+    result = FlightCollectionResult(
         airport=airport_code,
         airport_name=TAIWAN_AIRPORTS[airport_code],
         direction="departure",
@@ -56,6 +63,8 @@ async def get_airport_departures(
         total_flights=len(flights),
         flights=flights,
     )
+    set_cached(airport_code, "departure", query_date, result)
+    return result
 
 
 @router.get("/taiwan/{airport_code}/arrivals", response_model=FlightCollectionResult)
@@ -63,7 +72,7 @@ async def get_airport_arrivals(
     airport_code: str,
     query_date: str | None = Query(None, description="查詢日期 (YYYY-MM-DD)"),
 ):
-    """透過 Aviation Edge API 查詢指定台灣機場的入境航班"""
+    """查詢指定台灣機場的入境航班（優先讀快取）"""
     airport_code = airport_code.upper()
     if airport_code not in TAIWAN_AIRPORTS:
         raise HTTPException(
@@ -74,8 +83,14 @@ async def get_airport_arrivals(
     if query_date is None:
         query_date = date.today().isoformat()
 
+    # 優先讀快取
+    cached = get_cached(airport_code, "arrival", query_date)
+    if cached:
+        return cached
+
+    # 快取未命中，即時查詢並寫入快取
     flights = await aviation_edge_client.get_taiwan_arrivals(airport_code, query_date)
-    return FlightCollectionResult(
+    result = FlightCollectionResult(
         airport=airport_code,
         airport_name=TAIWAN_AIRPORTS[airport_code],
         direction="arrival",
@@ -83,6 +98,8 @@ async def get_airport_arrivals(
         total_flights=len(flights),
         flights=flights,
     )
+    set_cached(airport_code, "arrival", query_date, result)
+    return result
 
 
 @router.get("/timetable", response_model=list)
@@ -105,3 +122,15 @@ async def search_timetable(
         status=status,
     )
     return [f.model_dump(by_alias=True) for f in flights]
+
+
+@router.get("/cache/status")
+async def cache_status():
+    """查看快取狀態"""
+    return get_cache_stats()
+
+
+@router.post("/cache/refresh")
+async def manual_refresh():
+    """手動觸發快取更新"""
+    return await refresh_cache()

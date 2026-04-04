@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from app.config import settings
 from app.routers import aviation_edge, flights, scraper
 from app.services.aviation_edge_client import aviation_edge_client
+from app.services.flight_cache import flight_scheduler
 from app.services.oag_client import oag_client
 from app.services.taoyuan_scraper import taoyuan_scraper
 
@@ -14,7 +15,9 @@ from app.services.taoyuan_scraper import taoyuan_scraper
 async def lifespan(app: FastAPI):
     logging.basicConfig(level=settings.log_level.upper())
     logging.getLogger(__name__).info("Flight Schedule Service starting...")
+    await flight_scheduler.start()
     yield
+    await flight_scheduler.stop()
     await oag_client.close()
     await aviation_edge_client.close()
     await taoyuan_scraper.close()
