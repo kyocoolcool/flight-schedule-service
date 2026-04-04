@@ -5,6 +5,9 @@ class Settings(BaseSettings):
     oag_api_key: str = ""
     oag_base_url: str = "https://api.oag.com"
 
+    aviation_edge_api_key: str = ""
+    aviation_edge_base_url: str = "https://aviation-edge.com/v2/public"
+
     app_host: str = "0.0.0.0"
     app_port: int = 8000
     log_level: str = "info"
