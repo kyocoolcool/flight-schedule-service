@@ -214,6 +214,7 @@ class AviationEdgeClient:
         return FlightRecord(
             carrier_iata=flight.airline.iata_code if flight.airline else None,
             carrier_icao=flight.airline.icao_code if flight.airline else None,
+            carrier_name=flight.airline.name if flight.airline else None,
             flight_number=flight.flight.number if flight.flight else None,
             departure_airport_iata=flight.departure.iata_code if flight.departure else None,
             arrival_airport_iata=flight.arrival.iata_code if flight.arrival else None,
@@ -247,6 +248,7 @@ class AviationEdgeClient:
         return FlightRecord(
             carrier_iata=flight.airline.iata_code if flight.airline else None,
             carrier_icao=flight.airline.icao_code if flight.airline else None,
+            carrier_name=flight.airline.name if flight.airline else None,
             flight_number=flight.flight.number if flight.flight else None,
             departure_airport_iata=dep_iata,
             arrival_airport_iata=arr_iata,

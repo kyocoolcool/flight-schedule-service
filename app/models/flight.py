@@ -73,6 +73,7 @@ class FlightRecord(BaseModel):
 
     carrier_iata: str | None = None
     carrier_icao: str | None = None
+    carrier_name: str | None = None
     flight_number: str | None = None
     departure_airport_iata: str | None = None
     arrival_airport_iata: str | None = None
